@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import PolynomialFeatures
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 import seaborn as sns
+import csv
 plt.style.use('seaborn')
 
 
@@ -25,11 +26,11 @@ random.seed(1847960)
 df = pd.read_csv('vrv20.csv')
 
 
-X_list = df['X'].values.tolist()
-Y_list = df['Y'].values.tolist()
+# X_list = df['X'].values.tolist()
+# Y_list = df['Y'].values.tolist()
 
-x = np.array(X_list)  # converting list into numpy arrays for future manipulations
-y = np.array(Y_list)
+x = df['X'].values  # converting list into numpy arrays for future manipulations
+y = df['Y'].values
 
 x = x.reshape(-1, 1)  # reshaping the arrays retains the original data but changes the shape of the structure to be easily used in future operations
 y = y.reshape(-1, 1)
@@ -39,10 +40,10 @@ y = y.reshape(-1, 1)
 
 # Histogram plot of the wavelngth data 
 
-# plt.figure(dpi=150)
-# plt.hist(y)
-# plt.ylabel('Wavelength (nm)')
-# plt.title("Wavlength histogram")
+plt.figure(dpi=150)
+plt.hist(y, bins=50, edgecolor='black')
+plt.ylabel('Wavelength (nm)')
+plt.title("Wavlength histogram")
 
 # # Box plot of the wavelength data
 
@@ -91,7 +92,7 @@ print(table)
 # Standardising the time index: X
 
 mean_x = np.mean(x)
-std_dev_x_sample = np.std(x, ddof=1)  # calculating sample mean instead of population mean
+std_dev_x_sample = np.std(x, ddof=1)  # calculating sample std dev instead of population std dev
 x_standardised = (x - mean_x) / std_dev_x_sample
 
 # _____________________________________________________________________________________________________________________
@@ -127,7 +128,7 @@ plt.figure(dpi=150)
 plt.plot(x_standardised, y, '.')
 plt.ylabel('Wavelength (nm)')
 plt.xlabel('Time (Standardised)')
-plt.title('vrv20: Wavlength (nm) plotted against time')
+plt.title('vrv20: Wavelength (nm) plotted against time')
 
 # _______________________________________________________________________________________________________________________
 
@@ -137,13 +138,17 @@ plt.title('vrv20: Wavlength (nm) plotted against time')
 
 k = 6     # determines the max order upto which the linear regression y_predicted values are stored
 linear_regression_values_df = pd.DataFrame()   # all predicted values are stored in columns in a pandas dataframe, so that the values can be easily accessed for future operations
-linear_regression_values_df['x_standardised'] = x_standardised.tolist()
+# linear_regression_values_df['x_standardised'] = x_standardised.tolist()
+
+
+
 
 log_likelihood_arr = np.zeros(k)
 
+n = len(y)   # number of terms in the wavelength time series data. For vrv20 dataset: value = 851
 for i in range (1, k+1):
     poly_k = PolynomialFeatures(degree=i, include_bias=False)
-    x_poly_k = poly_k.fit_transform(x)
+    x_poly_k = poly_k.fit_transform(x_standardised)
     model_k = LinearRegression().fit(x_poly_k, y)
     y_predicted_k = model_k.predict(x_poly_k)
 
@@ -152,12 +157,12 @@ for i in range (1, k+1):
     plt.plot(x_standardised, y_predicted_k, label='Order ' + str(i))
 
     #  Log likelihood calculation: SUBJECT TO BE CHANGED
-    log_likelihood_arr[i-1] = (-0.5 * 851 * np.log(2 * np.pi * (std_dev**2))) - ( (0.5/(std_dev**2))  * np.sum((y - y_predicted_k)**2))
-    # ___________________________________________________________________________________________________________________________
+    log_likelihood_arr[i-1] = (-0.5 * n * np.log(2 * np.pi * (std_dev**2))) - ( (0.5/(std_dev**2))  * np.sum((y - y_predicted_k)**2))
+# ___________________________________________________________________________________________________________________________
 
     
 plt.legend()
-plt.grid(True)
+# plt.grid(True)
 
 # _______________________________________________________________________________________________________________________
 
@@ -187,25 +192,134 @@ print("Chosen model for linear regression based on lowest AIC value is of order:
 y_pred_chosen_order = np.array(linear_regression_values_df[str(k_selected)].values.tolist())
 residuals_arr = y - y_pred_chosen_order
 
+residuals_arr_standardised = StandardScaler().fit_transform(residuals_arr).flatten()
+res_std_dev = np.std(residuals_arr_standardised)
+
+quantiles = np.random.normal(0, res_std_dev, len(residuals_arr_standardised))
+
+quantiles.sort()
+residuals_arr_standardised.sort()
+
 plt.figure(dpi=150)
-plt.plot(x_standardised, residuals_arr, '.', color = 'orange')
-plt.axhline(y=0, color='r', linestyle='-')
-plt.title('Residual Plot')
+plt.plot(quantiles, residuals_arr_standardised, '.')
+plt.axline((0,0), (1,1), color='green', linestyle='--')
+plt.axis('square')
+plt.xlim(-4,4)
+plt.ylim(-4,4)
+plt.ylabel('Residuals')
+plt.xlabel('Normal Quantile')
+plt.title('Residuals Q-Q plot')
 
+# _______________________________________________________________________________________________________________________
+
+# Plotting the scatter plot of wavelength data in indexes of value 10 (variable called delta) , plot the chosen kth order of linear regression
+
+increments = 10  # time index incremenents
+x_increments = []
+y_increments = []
+for i in range(increments-1, len(x_standardised),increments):
+    x_increments.append(x_standardised[i])
+    y_increments.append(y[i])
+
+
+x_increments_array = np.array(x_increments)
+y_increments_array = np.array(y_increments)
+
+
+poly_k_increments = PolynomialFeatures(degree=k_selected, include_bias=False)
+x_poly_k_increments = poly_k_increments.fit_transform(x_increments_array)
+model_k_increments = LinearRegression().fit(x_poly_k_increments, y_increments_array)
+y_predicted_k_increments = model_k_increments.predict(x_poly_k_increments)
 
 
 plt.figure(dpi=150)
-
+plt.plot(x_increments_array, y_increments_array, '.', color='green', label = 'Sample scatter')
+plt.plot(x_increments_array, y_predicted_k_increments, label='Order ' + str(k_selected))
 plt.ylabel('Wavelength (nm)')
 plt.xlabel('Time (Standardised)')
+plt.title(f'Wavelength against time (standardised) in index increments of {increments}')
 
-plt.plot(x_standardised, y, '.')
-plt.plot(x_standardised, y_pred_chosen_order)
+# _______________________________________________________________________________________________________________________
 
-for i in range(len(x_standardised)):
-    plt.plot([x_standardised[i], x_standardised[i]], [y[i], y_pred_chosen_order[i]], color='gray', linestyle='--')
+
+
+# Bootstrapping
+
+bootstrapped_df = pd.DataFrame()
+bootstrap_iter = 10
+
+# y_predicted_bootstrapped = y_predicted_k_increments  # before any bootstrap, y_predicted would be from model 2(f)
+
+
+residuals_bootstrap = (y_increments_array - y_predicted_k_increments).flatten()
+
+for i in range(0, bootstrap_iter):
+
+    # residuals_bootstrap_iter_list = []
+
+    # for j in range(0, len(residuals_bootstrap)):
+    #     residuals_bootstrap_iter_list.append(random.choice(residuals_bootstrap))
+
+    
+    residuals_bootstrap_iter_arr = np.random.choice(residuals_bootstrap, len(residuals_bootstrap), replace=True)
+
+
+    # residuals_bootstrap_iter_arr = np.array(residuals_bootstrap_iter_list)
+
+    # y_response_bootstrap = y_predicted_bootstrapped + residuals_bootstrap_iter_arr
+
+    y_response_bootstrap = y_predicted_k_increments.flatten() + residuals_bootstrap_iter_arr
+
+
+    poly_bootstrap = PolynomialFeatures(degree=k_selected, include_bias=False)
+    x_poly_bootstrap = poly_bootstrap.fit_transform(x_increments_array)
+    model_bootstrap = LinearRegression().fit(x_poly_bootstrap, y_response_bootstrap)
+    y_predicted_bootstrapped = model_bootstrap.predict(x_poly_bootstrap)
+
+
+    # print(y_predicted_bootstrapped.shape)
+
+    bootstrapped_df[str(i)] = y_predicted_bootstrapped
+
+
+print(bootstrapped_df)
+
+
+quantile_025 = np.zeros(len(bootstrapped_df))
+quantile_975 = np.zeros(len(bootstrapped_df))
+for i in range(0, len(bootstrapped_df)):
+
+    quantile_array = bootstrapped_df.iloc[i].values
+    quantile_025[i] =  np.quantile(quantile_array, 0.025)
+    quantile_975[i] = np.quantile(quantile_array, 0.975)
+
+plt.plot(x_increments_array, quantile_025, linestyle='--', color='orange', label='0.025 quantile')
+plt.plot(x_increments_array, quantile_975, linestyle='--', color='red', label='0.975 quantile')
+plt.legend()
+
+
+print(len(quantile_025))
+print(" ")
+print(len(quantile_975))
+print(" ")
+print(len(x_increments_array))   
+
+
+
+
+
+# f = open('trial.csv', 'w')
+# writer = csv.writer(f)
+# writer.writerow(x)
+# writer.writerow(x_standardised)
+# writer.writerow(y)
+# writer.writerow(x_increments_array)
+# writer.writerow(y_increments_array)
+# f.close()
+
+
 
 
 # Show the necessary graphs at the end (commented out once the code is assumed to be working)
-# plt.show()
+plt.show()
 
