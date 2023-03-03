@@ -262,6 +262,7 @@ for i in range(0, bootstrap_iter):
 
     
     residuals_bootstrap_iter_arr = np.random.choice(residuals_bootstrap, len(residuals_bootstrap), replace=True)
+    print(residuals_bootstrap_iter_arr)
 
 
     # residuals_bootstrap_iter_arr = np.array(residuals_bootstrap_iter_list)
@@ -281,8 +282,46 @@ for i in range(0, bootstrap_iter):
 
     bootstrapped_df[str(i)] = y_predicted_bootstrapped
 
+# print("BREAK")
+# print(" ")
 
-print(bootstrapped_df)
+
+# def bootstrapping(actual_data, predicted_data, iterations):
+#     bootstrapped_df = pd.DataFrame()
+#     residuals_bootstrap = (actual_data - predicted_data).flatten()
+
+#     for i in range(0, iterations):
+
+#         residuals_bootstrap_iteration = np.random.choice(residuals_bootstrap, len(residuals_bootstrap), replace=True)
+#         print(residuals_bootstrap_iteration)
+
+#         y_response_bootstrap = predicted_data.flatten() + residuals_bootstrap_iteration
+
+#         y_predicted_bootstrapped = linear_regression(x_increments_array, y_response_bootstrap, k_selected)
+
+#         bootstrapped_df[str(i)] = y_predicted_bootstrapped
+
+#     return bootstrapped_df
+
+
+# def linear_regression(x_data, y_data, k):
+#     poly = PolynomialFeatures(degree=k, include_bias=False)
+#     x_poly = poly.fit_transform(x_data)
+#     model = LinearRegression().fit(x_poly, y_data)
+#     y_predicted = model.predict(x_poly)
+
+#     return y_predicted
+
+# bootstrapped_df2 = bootstrapping(y_increments_array, y_predicted_k_increments, 10)
+
+
+
+
+
+
+
+
+
 
 
 quantile_025 = np.zeros(len(bootstrapped_df))
@@ -321,5 +360,5 @@ print(len(x_increments_array))
 
 
 # Show the necessary graphs at the end (commented out once the code is assumed to be working)
-plt.show()
+# plt.show()
 
