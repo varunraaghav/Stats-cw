@@ -1,5 +1,7 @@
 # Imperial College London ME3 Statistics Coursework - Python Code 
 
+# trial git push to check git pull etc.
+
 # Import necessary libraries:
 import numpy as np
 import pandas as pd
@@ -149,11 +151,6 @@ linear_regression_values_df = pd.DataFrame()
 
 log_likelihood_arr = np.zeros(k_max)
 
-# making a subplot of 4x4 to plot the regressions
-
-fig, ax2 = plt.subplots(4,4, dpi=150)
-fig.suptitle('Subplots showing linear regression of different order polynomials')
-x,y = 0,0
 
 for i in range(1, k_max+1):
     
@@ -165,23 +162,7 @@ for i in range(1, k_max+1):
     linear_regression_values_df[str(i)] = y_temp.tolist()   # storing the predicted y values into a new column in a pandas dataframe
 
 
-    if y==4:
-        y=0
-        x += 1
-
-    ax2[x,y].plot(x_standardised, y, '.')
-    ax2[x,y].plot(x_standardised, y_temp, color='orangered')
-    ax2[x,y].set_title(f'Regression of order {str(i)}')
-
-    y+= 1
-
-
 plt.legend()
-
-for ax2 in fig.get_axes():
-    ax2.label_outer()
-fig.tight_layout()
-
 
 # _____________________________________________________________________________________________________________________________________________
 
