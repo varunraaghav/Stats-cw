@@ -1,7 +1,5 @@
 # Imperial College London ME3 Statistics Coursework - Python Code 
-
-# trial git push to check git pull etc.
-
+ 
 # Import necessary libraries:
 import numpy as np
 import pandas as pd
