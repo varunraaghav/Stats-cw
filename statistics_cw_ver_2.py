@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, trailing-whitespace
+
 # Imperial College London ME3 Statistics Coursework - Python Code 
  
 # Import necessary libraries:
@@ -5,14 +7,13 @@ import numpy as np
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-import statsmodels.api as sm
 from scipy import stats
+# import seaborn
 
 # using seaborn style plots
 plt.style.use('seaborn')
-
 
 # Random seed
 random.seed(1847960)
@@ -36,9 +37,9 @@ y = y.reshape(-1, 1)
 def histogram(data, bin_number):
     plt.figure(dpi=150)
     plt.hist(data, bins=bin_number, edgecolor='black')   # plt.hist function is used
-    plt.ylabel('Wavelength (nm)')
-    plt.xlabel('Time index')
-    plt.title(f"Wavlength histogram. Number of bins: {bin_number}")
+    plt.ylabel('Frequency')
+    plt.xlabel('Wavelength (nm)')
+    plt.title(f"Wavelength histogram. Number of bins: {bin_number}")
 
 
 
@@ -52,17 +53,17 @@ def boxplot(data):
 # Question 1(b): Getting general statistics of the wavelngth data
 
 def general_statistics(data):
-    mean = np.mean(y)
-    trimmed_mean = stats.trim_mean(y, 0.1)   #10% trimmed mean
-    median = np.median(y)
+    mean = np.mean(data)
+    trimmed_mean = stats.trim_mean(data, 0.1)   #10% trimmed mean
+    median = np.median(data)
     std_dev = np.std(y, ddof=0)      # This is the population standard deviation (since ddof = 0), different from sample standard deviation 
-    q1, q3 = np.percentile(y, [25, 75])
+    q1, q3 = np.percentile(data, [25, 75])
     iqr = q3 - q1
-
+    
 
     table_data = {
     'Statistic': ['Mean', '10% Trimmed Mean', 'Median', 'Standard Deviation', 'Interquartile Range'],
-    'Value': [mean, trimmed_mean, median, std_dev, iqr]
+    'Value': [mean, trimmed_mean, median, std_dev, iqr],
     }
     
     table = pd.DataFrame(table_data)  # putting the statistics into a pandas datafram
@@ -78,8 +79,6 @@ def scatter_function(x_data, y_data, color_value):
     plt.ylabel('Wavelength (nm)')
     plt.xlabel('Time')
 
-
-
 # Calling above functions for question 1
 histogram(y, 30)  # histogram bins set to 30
 boxplot(y)
@@ -87,15 +86,13 @@ boxplot(y)
 stats_table , std_dev = general_statistics(y)
 print(stats_table)
 print(" ")
-
-
 # _____________________________________________________________________________________________________________________________________________
 
 # QUESTION 2
 
-# Question 2(a): defining a linear_regression function to output the predicted y values based in inputted x_data , y_data and the desired order 'k'
+# Question 2(a): defining a polynomial_regression function to output the predicted y values based in inputted x_data , y_data and the desired order 'k'
 
-def linear_regression(x_data, y_data, k):
+def polynomial_regression(x_data, y_data, k):
     poly = PolynomialFeatures(degree=k, include_bias=False)   # using the required PolynomialFeatures function
     x_poly = poly.fit_transform(x_data)
     model = LinearRegression().fit(x_poly, y_data)
@@ -104,15 +101,14 @@ def linear_regression(x_data, y_data, k):
     return y_predicted
 
 
+scatter_function(x,y,"royalblue")   # CONTINUATION OF 1(C): Calling the scatter function to plot the wavelength against (unstandardised) time data
+plt.title("Wavelength (nm) plotted against time (unstandardised)")
 
-scatter_function(x,y,"green")   # CONTINUATION OF 1(C): Calling the scatter function to plot the wavelength against (unstandardised) time data
-plt.title("Wavlength (nm) plotted against time (unstandardised)")
+y_predicted_simple = polynomial_regression(x,y,1)  # 2(a) - calling polynomial_regression function to plot linear fit on scatter plot. Therefore order k=1 is inputted into function
+plt.plot(x, y_predicted_simple, label='Simple Linear Regression', color='orangered')
 
-y_predicted_simple = linear_regression(x,y,1)  # 2(a) - calling linear_regression function to plot linear fit on scatter plot. Therefore order k=1 is inputted into function
-plt.plot(x, y_predicted_simple, label='Simple Linear Regression')
-
-y_predicted_quadratic = linear_regression(x,y,2) # 2(b) - calling linear_regression function to plot quadratic fit on scatter plot. Therefore order k=2 is inputted into function
-plt.plot(x, y_predicted_quadratic, label='Quadratic Fit', color='orange')
+y_predicted_quadratic = polynomial_regression(x,y,2) # 2(b) - calling polynomial_regression function to plot quadratic fit on scatter plot. Therefore order k=2 is inputted into function
+plt.plot(x, y_predicted_quadratic, label='Quadratic Fit', color='dimgrey')
 plt.legend()
 
 # _____________________________________________________________________________________________________________________________________________
@@ -128,11 +124,6 @@ def standardisation(data):
 
 x_standardised = standardisation(x)    # calling standardisation function to standardise the time index
 
-scatter_function(x_standardised,y,'dimgrey')  # making a new scatter plot for wavelength against STANDARDISED time data
-plt.title('Standardised Wavelength plot')
-
-# _____________________________________________________________________________________________________________________________________________
-
 # Continuation of 2(c) and 2(d): Fitting higher order polynomials, calculating maximum log-likelihood and getting the AIC criterion
 
 # Log-likelihood function
@@ -143,24 +134,25 @@ def log_likelihood(actual_data, predicted_data, std_dev):
 
     return value
 
-
-k_max = 8  # setting the maximum order for which linear regression will be performed
-linear_regression_values_df = pd.DataFrame()
+k_max = 8  # setting the maximum order for which polynomial regression will be performed
+regression_values_df = pd.DataFrame()
 
 log_likelihood_arr = np.zeros(k_max)
 
 
 for i in range(1, k_max+1):
     
-    y_temp = linear_regression(x_standardised, y, i)  # finding the predicted y values for that specific order, starting from k=1, by calling the linear_regression func
-    plt.plot(x_standardised, y_temp, label='Order ' + str(i))   # standardised time is used
-    
+    y_temp = polynomial_regression(x_standardised, y, i)  # finding the predicted y values for that specific order, starting from k=1, by calling the polynomial_regression func
+
     log_likelihood_arr[i-1] = log_likelihood(y, y_temp, std_dev)  # storing the max log-likelihood for the regression order
     
-    linear_regression_values_df[str(i)] = y_temp.tolist()   # storing the predicted y values into a new column in a pandas dataframe
+    regression_values_df[str(i)] = y_temp.tolist()   # storing the predicted y values into a new column in a pandas dataframe
 
-
-plt.legend()
+    # Plotting the higher order regressions on a new scatter plot per order
+    scatter_function(x_standardised, y, 'royalblue')
+    plt.plot(x_standardised, y_temp, color='orangered', label=f'Polynomial regression of order {str(i)}')
+    plt.title('Standardised Wavelength data with higher order polynomial regression')
+    plt.legend()
 
 # _____________________________________________________________________________________________________________________________________________
 
@@ -177,7 +169,7 @@ def AIC(log_data, k_max):
 
     AIC_table = pd.DataFrame() # storing the AIC data in a pandas dataframe
 
-    AIC_table['Linear regression Order (ie parameters)'] = np.arange(1, k_max+1, 1)
+    AIC_table['Regression Order'] = np.arange(1, k_max+1, 1)
     AIC_table['Max Log likelihood'] = log_data
     AIC_table['AIC'] = AIC_arr
 
@@ -189,7 +181,7 @@ def AIC(log_data, k_max):
 AIC_table , k_selected = AIC(log_likelihood_arr, k_max)
 print(AIC_table)
 print(" ")
-print("Chosen model for linear regression based on lowest AIC value is of order: ", k_selected)
+print("Chosen model for Polynomial regression based on lowest AIC value is of order: ", k_selected)
 
 # _____________________________________________________________________________________________________________________________________________
 
@@ -199,12 +191,22 @@ def residual(actual_data, predicted_data):
     residual_arr = actual_data - predicted_data
     return residual_arr
 
-y_pred_chosen_order = np.array(linear_regression_values_df[str(k_selected)].values.tolist())  # getting the values from 2(c) which was stored in a dataframe and pytting into a numpy array
+y_pred_chosen_order = np.array(regression_values_df[str(k_selected)].values.tolist())  # getting the values from 2(c) which was stored in a dataframe and pytting into a numpy array
 
 residuals = residual(y, y_pred_chosen_order)  # calculating the residuals for that order
 
 residuals_arr_standardised = standardisation(residuals).flatten()   # standardising the residuals data
 res_std_dev = np.std(residuals_arr_standardised)  # finding the population std deviation of the standardised residual data
+
+
+# Plotting a residuals scatter plot to check homoscedasticity 
+plt.figure(dpi=150)
+plt.plot(y_pred_chosen_order, residuals_arr_standardised, '.')
+plt.axhline(0, linestyle= '--', color='orangered')
+plt.title('Residuals plot')
+plt.ylabel('Standardised residuals')
+plt.xlabel('Wavelength (nm)')
+
 
 quantiles = np.random.normal(0, res_std_dev, len(residuals_arr_standardised))   # finding the normal distribution of that residual_data using mean = 0 (since residual_data is standardised) and standard deviation = res_std_dev
 
@@ -215,13 +217,14 @@ residuals_arr_standardised.sort()
 
 plt.figure(dpi=150)
 plt.plot(quantiles, residuals_arr_standardised, '.')  # plotting the sorted quantiles on the x axis, and the residuals on the y_axis to make a residual q-q plot
-plt.axline((0,0), (1,1), color='green', linestyle='--')  # plotting a y=x line to see the deviation from a normal distribution
+plt.axline((0,0), (1,1), color='orangered', linestyle='--')  # plotting a y=x line to see the deviation from a normal distribution
 plt.axis('square')
 plt.xlim(-4,4)
 plt.ylim(-4,4)
 plt.ylabel('Residuals')
 plt.xlabel('Normal Quantile')
 plt.title('Residuals Q-Q plot')
+
 
 # _____________________________________________________________________________________________________________________________________________
 
@@ -240,15 +243,15 @@ def sampling(data, increments):
 x_increments_array = np.array(sampling(x_standardised, 10))   # increments set to 10
 y_increments_array = np.array(sampling(y, 10))
 
-# calculating the y_predicted values for the sampled data using the linear_regression function, of order 'k_selected' based on the lowest AIC value
-y_predicted_k_increments = linear_regression(x_increments_array, y_increments_array, k_selected)
+# calculating the y_predicted values for the sampled data using the polynomial_regression function, of order 'k_selected' based on the lowest AIC value
+y_predicted_k_increments = polynomial_regression(x_increments_array, y_increments_array, k_selected)
 
 
-# plotting the sampled x,y data and the linear regression y_pred values 
+# plotting the sampled x,y data and the polynomial regression y_pred values 
 
-scatter_function(x_increments_array, y_increments_array, 'coral')
+scatter_function(x_increments_array, y_increments_array, 'royalblue')
 plt.title('Wavelength against time (standardised) in index increments of 10')
-plt.plot(x_increments_array, y_predicted_k_increments, color='green', label='Order ' + str(k_selected))
+plt.plot(x_increments_array, y_predicted_k_increments, color='red', label='Order ' + str(k_selected))
 
 
 # _____________________________________________________________________________________________________________________________________________
@@ -267,7 +270,7 @@ def bootstrapping(actual_data, predicted_data, iterations):
 
         y_response_bootstrap = predicted_data.flatten() + residuals_bootstrap_iteration  # calculated bootstrapped response array using bootstrap_sample and predicted data.  denoted in notes by y^{*}
 
-        y_predicted_bootstrapped = linear_regression(x_increments_array, y_response_bootstrap, k_selected)  # finding the linear regression y_predicted values for the bootstrapped response
+        y_predicted_bootstrapped = polynomial_regression(x_increments_array, y_response_bootstrap, k_selected)  # finding the regression y_predicted values for the bootstrapped response
 
         bootstrapped_data.append(y_predicted_bootstrapped)   # storing y_predicted_bootstrapped in a list
 
@@ -310,10 +313,12 @@ plt.legend()
 
 bootstrap_multiple_iter = [5, 20, 100, 500, 1200, 3000]   # number of times bootstrapping will be performed
 
-x,y = 0,0  # temporary indices used to create a visually appealing subplot
+a,b = 0,0  # temporary indices used to create a visually appealing subplot
 
 fig,ax = plt.subplots(2,3, dpi=150)
 fig.suptitle(f'Subplots showing 95% confidence interval convergence as bootstrap sample increases')
+fig.supylabel('Wavelength (nm)')
+fig.supxlabel('Time')
 
 for i in range(0, len(bootstrap_multiple_iter)):
 
@@ -324,18 +329,18 @@ for i in range(0, len(bootstrap_multiple_iter)):
     quantile_975 = quantile_function(bootstrapped_df, 0.975)
 
     # temp code to create visual subplot for 2x3 plots
-    if y == 3:
-        y = 0
-        x += 1
+    if b == 3:
+        b = 0
+        a += 1
 
-    # plotting the sampled x,y data; linear regression values and the bootstrapped sample in a subplot
-    ax[x, y].plot(x_increments_array, y_increments_array, '.', color='coral')
-    ax[x, y].plot(x_increments_array, y_predicted_k_increments, color='green')
+    # plotting the sampled x,y data; regression values and the bootstrapped sample in a subplot
+    ax[a, b].plot(x_increments_array, y_increments_array, '.', color='royalblue')
+    ax[a, b].plot(x_increments_array, y_predicted_k_increments, color='orangered')
 
-    ax[x, y].fill_between(x_increments_array.squeeze(), quantile_025, quantile_975, alpha = 0.3)
-    ax[x, y].set_title(f'{bootstrap_multiple_iter[i]} iterations')
+    ax[a, b].fill_between(x_increments_array.squeeze(), quantile_025, quantile_975, alpha = 0.3)
+    ax[a, b].set_title(f'{bootstrap_multiple_iter[i]} iterations')
 
-    y += 1
+    b += 1
 
 for ax in fig.get_axes():
     ax.label_outer()
@@ -344,5 +349,3 @@ fig.tight_layout()
 # _____________________________________________________________________________________________________________________________________________
 
 plt.show()
-
-
